@@ -4,49 +4,51 @@ import path from "path";
 const envPath = path.join(__dirname, "../../.env");
 dotenv.config({ path: envPath });
 
-import { Router } from 'express';
-// import { makeValidator, string, object } from 'valibot';
-import axios from "axios";
+const serverPORT = process.env.SERVER_PORT;
 
+if (!serverPORT) {
+    logger.error("No server port provided in .ENV file.");
+    process.exit(1);
+}
+
+import { Router } from "express";
+import axios from "axios";
 import logger from "./logger";
 
 const router = Router();
 
 router.post("/*", async (req, res) => {
     try {
-        const target = req.originalUrl;
-        const serverPORT = process.env.SERVER_PORT;
+        const route = req.originalUrl;
 
-        console.log("Request Details:", {
-            method: req.method,
-            url: req.url,
-            headers: req.headers,
-            body: req.body,
-          });
 
-        const response = await axios.post(`http://localhost:${serverPORT}${target}`, req.body, {
-            headers: {
-                ...req.headers,
-                'Content-Type': 'application/json',
-            },
+        const response = await axios.post(`http://localhost:${serverPORT}${route}`, req.body, {
+            headers: { "Content-Type": req.headers["content-type"] }
+        });
+        res.json(response.data);
+
+    } catch (error) {
+        const err = (error as Error);
+
+        logger.error("Error during gateway pass", {
+            message: err.message,
+            stack: err.stack,
         });
 
-        console.log("RESPONSE DATA : ", response);
-
-        res.status(response.status).json(response.data);
-    } catch (err) {
         if (axios.isAxiosError(err)) {
             res.status(err.response?.status || 500)
-                .json({ error: "Request blocked on gateway.", details: err });
+                .json({
+                    error: "Request blocked on gateway",
+                    details: err.message,
+                    serverResponse: err.response?.data || "No response from the server",
+                });
         } else {
             res.status(500)
-                .json({ error: "Unknown error occured", details: `${(err as Error).message}` });
+                .json({
+                    error: "Unknown error occured",
+                    details: err.message
+                });
         }
-
-        logger.error("Error Occured", {
-            message: (err as Error).message,
-            stack: (err as Error).stack,
-        });
     }
 });
 

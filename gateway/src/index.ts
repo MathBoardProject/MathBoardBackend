@@ -1,15 +1,19 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+
+const envPath = path.join(__dirname, "../../.env");
+dotenv.config({ path: envPath });
+
 import express from "express";
 
-import proxyRoutes from "./proxy";
+import router from "./proxy";
 
 const app = express();
 
 app.use(express.json());
+app.use(router);
 
-app.use('/api', proxyRoutes);
-
-const PORT = process.env.GATEWAYPORT || 3001;
-app.listen(PORT, ()=>{
+const PORT = process.env.GATEWAY_PORT || 3001;
+app.listen(PORT, () => {
     console.log(`Gateway is listening on port : ${PORT}`);
 });
