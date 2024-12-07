@@ -10,14 +10,13 @@ import cors from "cors";
 import routes from "./routes";
 
 const PORT: number = Number(process.env.SERVER_PORT) || 4001;
-const GatewayPORT = Number(process.env.GATEWAY_PORT) || 3001;
 
 const app = express();
 
 app.use(express.json());
 
 app.use(cors({
-    origin: `*`, //dev
+    origin: `*`, //DEV
     methods: "GET POST",
 }));
 
