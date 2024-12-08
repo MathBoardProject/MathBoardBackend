@@ -25,8 +25,6 @@ class UserDatabase extends PoolConnection {
             'mathBoardUserDB',
         )
         this.connect();
-        this.connection?.query()
-
     }
 }
 
