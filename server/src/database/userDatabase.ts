@@ -14,7 +14,6 @@ if (!DB_HOST || !DB_USER || !DB_PASSWORD) {
     process.exit(1);
 }
 
-
 class UserDatabase extends PoolConnection {
     constructor() {
         super(
@@ -22,9 +21,13 @@ class UserDatabase extends PoolConnection {
             Number(DB_USER_PORT) || 3306,
             DB_USER || 'root',
             DB_PASSWORD || '',
-            'mathBoardUserDB',
+            'mathBoardDB',
         )
         this.connect();
+    }
+
+    async initialize(){
+
     }
 }
 
