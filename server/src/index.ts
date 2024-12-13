@@ -11,6 +11,7 @@ import routes from "./routes";
 import getPool from "./database/poolConnection";
 
 const pool = getPool();
+//remember to change remote origin to fork repo
 
 const PORT: number = Number(process.env.SERVER_PORT) || 4001;
 
@@ -30,3 +31,6 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
+//write tests for db and maybe use TDD
+//connect to fork

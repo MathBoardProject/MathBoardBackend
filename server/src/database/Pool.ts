@@ -41,14 +41,22 @@ class PoolConnection {
             console.log(queryDB);
             await this.connection?.query(queryDB);
 
-            this.connection?.query(`USE ${this.database}`);
+            await this.connection?.query(`USE ${this.database}`);
 
-            const queryBoardsTable = `CREATE TABLE IF NOT EXISTS boards(
+            const queryBoards = `CREATE TABLE IF NOT EXISTS boards(
                 id INT AUTO_INCREMENT NOT NULL UNIQUE,
                 ownerId INT NOT NULL,
                 boardName VARCHAR(40) NOT NULL
             );`;
-            this.connection?.query(queryBoardsTable);
+            this.connection?.query(queryBoards);
+
+            const queryStrokes = `CREATE TABLE IF NOT EXISTS strokes(
+                id INT AUTO_INCREMENT NOT NULL UNIQUE,
+                boardId INT NOT NULL,
+                SVG TEXT NOT NULL
+            )`;
+
+            await this.connection?.query(queryStrokes);
             console.log("DB created !");
         } catch (err) {
             logger.error("Error during initializing DB", { error: err });
@@ -74,16 +82,22 @@ class PoolConnection {
     }
 
     async queryDB(query: string) {
-        this.connection?.query(query);
+        await this.connection?.query(query);
     }
 
     async createBoard(ownerId: string, boardName: string) {
         try {
             const query = `INSERT INTO ${this.database} (ownerId, boardName) VALUES (?,?)`;
-            this.connection?.query(query, [ownerId, boardName]);
+            await this.connection?.query(query, [ownerId, boardName]);
         } catch (err) {
-            logger.error("Error inserting board:", err);
+            logger.error("Error during board insertion:", err);
         }
+    }
+
+    async getStrokes(boardId: number) {
+        const query = `SELECT * FROM strokes WHERE boardId = ?`
+        const [rows, fields] = await this.connection?.query(query, [boardId]);
+        return rows;
     }
 }
 
