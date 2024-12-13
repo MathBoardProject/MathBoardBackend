@@ -8,6 +8,9 @@ import express from "express";
 import cors from "cors";
 
 import routes from "./routes";
+import getPool from "./database/poolConnection";
+
+const pool = getPool();
 
 const PORT: number = Number(process.env.SERVER_PORT) || 4001;
 
