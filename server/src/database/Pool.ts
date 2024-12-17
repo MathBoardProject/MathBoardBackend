@@ -1,10 +1,18 @@
 import mariadb from "mariadb";
 import logger from "../logger";
+import { readFileSync } from "fs";
 
 import * as dbInterfaces from "./db";
 
+const [queryDB, queryStrokes, queryBoards] = [
+    String(readFileSync("./queries/databaseInit.sql")),
+    String(readFileSync("./queries/strokesInit.sql")),
+    String(readFileSync("boardsInit.sql"))
+];
+
 class PoolConnection {
-    protected connection: mariadb.Pool | null = null;
+    protected pool: mariadb.Pool | null = null;
+    protected connection: mariadb.Connection | null = null;
 
     constructor(
         protected host: string,
@@ -14,10 +22,10 @@ class PoolConnection {
         protected database: string,
     ) { }
 
-    async connect() {
+    async connect(initDB = true) {
         try {
-            if (!this.connection) {
-                this.connection = mariadb.createPool({
+            if (!this.pool) {
+                this.pool = mariadb.createPool({ //stops jest from exiting app
                     host: this.host,
                     port: this.port,
                     user: this.user,
@@ -25,55 +33,32 @@ class PoolConnection {
                     connectionLimit: 10,
                 });
             }
-            await this.initializeDB();
+            this.connection = await this.pool.getConnection();
 
-            logger.info(`Connected to DB: ${this.database}`);
+            if (initDB) {
+                await this.connection?.query(queryDB);
+
+                await this.connection?.query(`USE ${this.database}`);
+
+                await this.connection?.query(queryBoards);
+                await this.connection?.query(queryStrokes);
+            }
         } catch (err) {
             logger.error("Error during DB connection.", { error: err });
             await this.close()
         }
     }
 
-    async initializeDB() {
-        if (!this.connection) {
-            logger.error("Cannot initialize DB, no connection established.");
-        }
-        try {
-            const queryDB = `CREATE DATABASE IF NOT EXISTS ${this.database};`;
-            await this.connection?.query(queryDB);
-
-            console.log(`Querying : USE ${this.database};`);
-
-            const queryBoards = `CREATE TABLE IF NOT EXISTS boards(
-                id INT AUTO_INCREMENT NOT NULL UNIQUE,
-                ownerId INT NOT NULL,
-                boardName VARCHAR(40) NOT NULL
-            );`;
-
-            await this.connection?.query(queryBoards);
-
-            const queryStrokes = `CREATE TABLE IF NOT EXISTS strokes(
-                id INT AUTO_INCREMENT NOT NULL UNIQUE,
-                boardId INT NOT NULL,
-                svg TEXT NOT NULL,
-                x INT NOT NULL,
-                y INT NOT NULL
-            );`;
-
-            await this.connection?.query(queryStrokes);
-        } catch (err) {
-            logger.error("Error during initializing DB", { error: err });
-        }
-    }
-
     async close() {
         try {
-            if (this.connection) {
+            if (this.connection || this.pool) {
                 this.connection?.end();
                 this.connection = null;
-                logger.info("Pool conection closed succesfuly");
-            } else {
-                logger.error("Failed to close pull connection");
+
+                this.pool?.end();
+                this.pool = null;
+
+                logger.info("Pool and connection to db closed successfuly");
             }
         } catch (error) {
             const err = (error as Error);
@@ -84,40 +69,55 @@ class PoolConnection {
         }
     }
 
-    async queryDB(query: string) {
-        await this.connection?.query(query);
+    async query(query: string) {
+        try {
+            const response = this.connection?.query(query);
+            return response;
+        } catch (err) {
+            logger.error(err);
+        }
     }
 
     //Insertion
     async insertBoard(ownerId: number, boardName: string) {
         try {
-            const query = `INSERT INTO boards (ownerId, boardName) VALUES (?,?);`;
+            const query = `INSERT INTO boards (ownerId, boardName) VALUES (?, ?);`;
             await this.connection?.query(query, [ownerId, boardName]);
+            console.log(`Board "${boardName}" inserted successfully for ownerId: ${ownerId}`);
         } catch (err) {
             logger.error("Error during board insertion:", err);
         }
     }
 
     async insertStroke(boardId: number, svg: string, x: number, y: number) {
-        const query = `INSERT INTO strokes (boardId, svg, x, y) VALUES (?,?,?,?);`;
-        await this.connection?.query(query, [boardId, svg, x, y]);
+        try {
+            const query = `INSERT INTO strokes (boardId, svg, x, y) VALUES (?,?,?,?);`;
+            await this.connection?.query(query, [boardId, svg, x, y]);
+        } catch (err) {
+            logger.error(err);
+        }
     }
 
     //Accessors
-    async getBoard(boardId: number): Promise<dbInterfaces.board[]> {
-        const query = `SELECT * FROM boards WHERE id = ?;`;
-        const response = await this.connection?.query(query, [boardId]);
-        return response;
+    async getBoard(boardId: number): Promise<dbInterfaces.board[] | undefined> {
+        try {
+            const query = `SELECT * FROM boards WHERE id = ?;`;
+            const response = await this.connection?.query(query, [boardId]);
+            return response;
+        } catch (err) {
+            logger.error(err);
+        }
     }
 
     async getAllStrokes(boardId: number): Promise<dbInterfaces.stroke[] | undefined> {
-        const query = `SELECT id, boardId, svg, x, y FROM strokes WHERE boardId = ?;`;
-        const response: dbInterfaces.stroke[] | undefined = await this.connection?.query(query, [boardId]);
-        return response;
+        try {
+            const query = `SELECT id, boardId, svg, x, y FROM strokes WHERE boardId = ?;`;
+            const response: dbInterfaces.stroke[] | undefined = await this.connection?.query(query, [boardId]);
+            return response;
+        } catch (err) {
+            logger.error(err);
+        }
     }
 }
 
 export default PoolConnection;
-
-//Think if making query interface to store queries and "?" values would be great idea.
-//Repair issue with USE db, it needs to be used every query by some reason
