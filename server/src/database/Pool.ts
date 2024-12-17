@@ -1,6 +1,8 @@
 import mariadb from "mariadb";
 import logger from "../logger";
 
+import * as dbInterfaces from "./db";
+
 class PoolConnection {
     protected connection: mariadb.Pool | null = null;
 
@@ -23,8 +25,9 @@ class PoolConnection {
                     connectionLimit: 10,
                 });
             }
-            this.initializeDB();
-            console.log("Connection went successful");
+            await this.initializeDB();
+
+            logger.info(`Connected to DB: ${this.database}`);
         } catch (err) {
             logger.error("Error during DB connection.", { error: err });
             await this.close()
@@ -32,32 +35,32 @@ class PoolConnection {
     }
 
     async initializeDB() {
-        console.log("Initialization started !");
         if (!this.connection) {
             logger.error("Cannot initialize DB, no connection established.");
         }
         try {
             const queryDB = `CREATE DATABASE IF NOT EXISTS ${this.database};`;
-            console.log(queryDB);
             await this.connection?.query(queryDB);
 
-            await this.connection?.query(`USE ${this.database}`);
+            console.log(`Querying : USE ${this.database};`);
 
             const queryBoards = `CREATE TABLE IF NOT EXISTS boards(
                 id INT AUTO_INCREMENT NOT NULL UNIQUE,
                 ownerId INT NOT NULL,
                 boardName VARCHAR(40) NOT NULL
             );`;
-            this.connection?.query(queryBoards);
+
+            await this.connection?.query(queryBoards);
 
             const queryStrokes = `CREATE TABLE IF NOT EXISTS strokes(
                 id INT AUTO_INCREMENT NOT NULL UNIQUE,
                 boardId INT NOT NULL,
-                SVG TEXT NOT NULL
-            )`;
+                svg TEXT NOT NULL,
+                x INT NOT NULL,
+                y INT NOT NULL
+            );`;
 
             await this.connection?.query(queryStrokes);
-            console.log("DB created !");
         } catch (err) {
             logger.error("Error during initializing DB", { error: err });
         }
@@ -66,11 +69,11 @@ class PoolConnection {
     async close() {
         try {
             if (this.connection) {
-                await this.connection.end();
+                this.connection?.end();
                 this.connection = null;
-                console.log("Pool conection closed succesfuly");
+                logger.info("Pool conection closed succesfuly");
             } else {
-                console.log("Failed to close pull connection");
+                logger.error("Failed to close pull connection");
             }
         } catch (error) {
             const err = (error as Error);
@@ -85,20 +88,36 @@ class PoolConnection {
         await this.connection?.query(query);
     }
 
-    async createBoard(ownerId: string, boardName: string) {
+    //Insertion
+    async insertBoard(ownerId: number, boardName: string) {
         try {
-            const query = `INSERT INTO ${this.database} (ownerId, boardName) VALUES (?,?)`;
+            const query = `INSERT INTO boards (ownerId, boardName) VALUES (?,?);`;
             await this.connection?.query(query, [ownerId, boardName]);
         } catch (err) {
             logger.error("Error during board insertion:", err);
         }
     }
 
-    async getStrokes(boardId: number) {
-        const query = `SELECT * FROM strokes WHERE boardId = ?`
-        const [rows, fields] = await this.connection?.query(query, [boardId]);
-        return rows;
+    async insertStroke(boardId: number, svg: string, x: number, y: number) {
+        const query = `INSERT INTO strokes (boardId, svg, x, y) VALUES (?,?,?,?);`;
+        await this.connection?.query(query, [boardId, svg, x, y]);
+    }
+
+    //Accessors
+    async getBoard(boardId: number): Promise<dbInterfaces.board[]> {
+        const query = `SELECT * FROM boards WHERE id = ?;`;
+        const response = await this.connection?.query(query, [boardId]);
+        return response;
+    }
+
+    async getAllStrokes(boardId: number): Promise<dbInterfaces.stroke[] | undefined> {
+        const query = `SELECT id, boardId, svg, x, y FROM strokes WHERE boardId = ?;`;
+        const response: dbInterfaces.stroke[] | undefined = await this.connection?.query(query, [boardId]);
+        return response;
     }
 }
 
 export default PoolConnection;
+
+//Think if making query interface to store queries and "?" values would be great idea.
+//Repair issue with USE db, it needs to be used every query by some reason

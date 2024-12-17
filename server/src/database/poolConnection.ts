@@ -7,15 +7,13 @@ dotenv.config({ path: envPath });
 import logger from "../logger";
 import PoolConnection from "./Pool";
 
-const { DB_HOST, DB_USER_PORT = 3306, DB_USER, DB_PASSWORD } = process.env;
-
-function getPool(): PoolConnection {
-    if (!DB_HOST || !DB_USER || !DB_PASSWORD) {
-        logger.error("No database enviroment variables provided in .ENV file.");        
+function getPool(dbName: string, host: string, port: number = 3306, user: string, password: string): PoolConnection {
+    if (!host || !user || !password) {
+        logger.error("No database enviroment variables provided in .ENV file.");
         process.exit(1);
     }
-    
-    const pool = new PoolConnection(DB_HOST, Number(DB_USER_PORT), DB_USER, DB_PASSWORD, "mathBoard")
+
+    const pool = new PoolConnection(host, Number(port), user, password, dbName);
     pool.connect();
     return pool;
 }
