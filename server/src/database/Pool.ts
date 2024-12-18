@@ -1,13 +1,16 @@
 import mariadb from "mariadb";
 import logger from "../logger";
 import { readFileSync } from "fs";
+import path from "path";
 
 import * as dbInterfaces from "./db";
 
-const [queryDB, queryStrokes, queryBoards] = [
-    String(readFileSync("./queries/databaseInit.sql")),
-    String(readFileSync("./queries/strokesInit.sql")),
-    String(readFileSync("boardsInit.sql"))
+console.log("PATH:", path.join(__dirname, "./queries/databaseInit.sql"))
+
+const [queryStrokes, queryBoards] = [
+    // `CREATE DATABASE IF NOT EXISTS $ { this.database };`, // dev
+    String(readFileSync(path.join(__dirname, "./queries/strokesInit.sql"))),
+    String(readFileSync(path.join(__dirname, "./queries/boardsInit.sql")))
 ];
 
 class PoolConnection {
@@ -36,7 +39,7 @@ class PoolConnection {
             this.connection = await this.pool.getConnection();
 
             if (initDB) {
-                await this.connection?.query(queryDB);
+                await this.connection?.query(`CREATE DATABASE IF NOT EXISTS $ { this.database };`); //Dev
 
                 await this.connection?.query(`USE ${this.database}`);
 

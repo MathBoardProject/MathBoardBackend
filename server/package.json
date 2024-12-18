@@ -25,6 +25,7 @@
   },
   "scripts": {
     "dev": "rm -rf ./dist/* &&tsc && node ./dist/index.js",
+    "socket" : "rm -rf ./dist/* &&tsc && node ./dist/socket.js",
     "build": "tsc",
     "test": "jest"
   }

@@ -17,7 +17,8 @@
     "**/tests/*"
   ],
   "exclude": [
-    "tests"
+    "tests",
+    "queries"
   ],
   "types": [
     "...",
