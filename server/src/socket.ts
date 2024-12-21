@@ -17,7 +17,7 @@ try {
             console.error(`Error: ${err.message}`);
         });
 
-        client.on('close', () => {
+        client.on('close', () => { 
             console.log('Server closed the connection.');
         });
 

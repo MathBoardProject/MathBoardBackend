@@ -9,8 +9,8 @@ console.log("PATH:", path.join(__dirname, "./queries/databaseInit.sql"))
 
 const [queryStrokes, queryBoards] = [
     // `CREATE DATABASE IF NOT EXISTS $ { this.database };`, // dev
-    String(readFileSync(path.join(__dirname, "./queries/strokesInit.sql"))),
-    String(readFileSync(path.join(__dirname, "./queries/boardsInit.sql")))
+    String(readFileSync(path.join(__dirname, "../../queries/strokesInit.sql"))),
+    String(readFileSync(path.join(__dirname, "../../queries/boardsInit.sql"))),
 ];
 
 class PoolConnection {
