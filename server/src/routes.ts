@@ -10,7 +10,7 @@ router.post("/api", (req, res) => {
 });
 
 router.post("/resolveEquation", (req, res)=>{
-
+    const strokesIds: number[] = req.body.strokesIds;
 });
 
 export default router;

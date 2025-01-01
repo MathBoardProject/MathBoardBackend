@@ -5,10 +5,7 @@ import path from "path";
 
 import * as dbInterfaces from "./db";
 
-console.log("PATH:", path.join(__dirname, "./queries/databaseInit.sql"))
-
 const [queryStrokes, queryBoards] = [
-    // `CREATE DATABASE IF NOT EXISTS $ { this.database };`, // dev
     String(readFileSync(path.join(__dirname, "../../queries/strokesInit.sql"))),
     String(readFileSync(path.join(__dirname, "../../queries/boardsInit.sql"))),
 ];
@@ -28,7 +25,7 @@ class PoolConnection {
     async connect(initDB = true) {
         try {
             if (!this.pool) {
-                this.pool = mariadb.createPool({ //stops jest from exiting app
+                this.pool = mariadb.createPool({
                     host: this.host,
                     port: this.port,
                     user: this.user,
@@ -47,7 +44,7 @@ class PoolConnection {
                 await this.connection?.query(queryStrokes);
             }
         } catch (err) {
-            logger.error("Error during DB connection.", { error: err });
+            logger.error("Error during DB connection, check if mariadb is running.", { error: err });
             await this.close()
         }
     }

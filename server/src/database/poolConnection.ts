@@ -12,10 +12,12 @@ async function getPool(dbName: string, host: string, port: number = 3306, user: 
         logger.error("No database enviroment variables provided in .ENV file.");
         process.exit(1);
     }
-
     const pool = new PoolConnection(host, Number(port), user, password, dbName);
     await pool.connect();
+
     return pool;
 }
 
 export default getPool;
+
+//check if this file is needed
