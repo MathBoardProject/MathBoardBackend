@@ -8,7 +8,6 @@ try {
             console.log('Connected to server!');
 
             // Send a message to the server
-
         });
         
         client.write('Hello, Server!');

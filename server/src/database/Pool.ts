@@ -10,20 +10,29 @@ const [queryStrokes, queryBoards] = [
     String(readFileSync(path.join(__dirname, "../../queries/boardsInit.sql"))),
 ];
 
-class PoolConnection {
+class PoolConnection { //check if name is accurate DEV
     protected pool: mariadb.Pool | null = null;
     protected connection: mariadb.Connection | null = null;
 
     constructor(
-        protected host: string,
-        protected port: number,
-        protected user: string,
-        protected password: string,
-        protected database: string,
-    ) { }
+        protected host: string | undefined,
+        protected port: number | undefined,
+        protected user: string | undefined,
+        protected password: string | undefined,
+        protected database: string | undefined,
+    ) {
+        if (!this.host || !this.host || !this.user || !this.password || !this.database) {
+            logger.error("No database enviroment variables provided in .ENV file.");
+            process.exit(1);
+        }
+    }
 
     async connect(initDB = true) {
         try {
+            if (!this.host || !this.host || !this.user || !this.password || !this.database) {
+                logger.error("No database enviroment variables provided in .ENV file.");
+                process.exit(1);
+            }
             if (!this.pool) {
                 this.pool = mariadb.createPool({
                     host: this.host,
@@ -78,6 +87,11 @@ class PoolConnection {
         }
     }
 
+    //Helper functions
+    createPlaceholders(array: number[]) {
+        return array.map(() => "?").join(", ");
+    }
+
     //Insertion
     async insertBoard(ownerId: number, boardName: string) {
         try {
@@ -86,15 +100,6 @@ class PoolConnection {
             console.log(`Board "${boardName}" inserted successfully for ownerId: ${ownerId}`);
         } catch (err) {
             logger.error("Error during board insertion:", err);
-        }
-    }
-
-    async insertStroke(boardId: number, svg: string, x: number, y: number) {
-        try {
-            const query = `INSERT INTO strokes (boardId, svg, x, y) VALUES (?,?,?,?);`;
-            await this.connection?.query(query, [boardId, svg, x, y]);
-        } catch (err) {
-            logger.error(err);
         }
     }
 
@@ -109,7 +114,7 @@ class PoolConnection {
         }
     }
 
-    async getAllStrokes(boardId: number): Promise<dbInterfaces.stroke[] | undefined> {
+    async loadBoard(boardId: number): Promise<dbInterfaces.stroke[] | undefined> {
         try {
             const query = `SELECT id, boardId, svg, x, y FROM strokes WHERE boardId = ?;`;
             const response: dbInterfaces.stroke[] | undefined = await this.connection?.query(query, [boardId]);
@@ -118,6 +123,46 @@ class PoolConnection {
             logger.error(err);
         }
     }
+
+    //Strokes operations
+    async pushStrokes(boardId: number, svg: string[], x: number[], y: number[]) { //edit it for multi push same as bottom one
+        try {
+            if (svg.length !== (x.length + y.length) / 2) { //checks if the length of every args is the same.
+                throw new Error("Length of arguments is not equal while inserting Stokes.");
+            }
+            const placeholders = x.map(() => { "?, ?, ?, ?" }).join(", ");
+            const query = `INSERT INTO strokes (boardId, svg, x, y) VALUES (${placeholders});`;
+            const values = svg.flatMap((stroke, index) => [boardId, stroke, x[index], y[index]]);
+            await this.connection?.query(query, values);
+        } catch (err) {
+            logger.error("Error during db insertStroke", err);
+        }
+    }
+
+    async pullStrokes(boardId: number, idList: number[]) {
+        try {
+            const placeholders = this.createPlaceholders(idList);
+            const query = `SELECT * FROM strokes WHERE boardId = ? AND id IN (${placeholders})`;
+            const strokes: dbInterfaces.stroke[] | undefined = await this.connection?.query(query, [boardId, ...idList]);
+            return strokes;
+        } catch (err) {
+            logger.error("Error during db pullStroke", err);
+        }
+    }
+
+    async deleteStrokes(boardId: number, idList: number[]) {
+        try {
+            const placeholders = this.createPlaceholders(idList);
+            const query = `DELETE FROM strokes WHERE boardId = ? AND id IN (${placeholders})`;
+            const strokes: dbInterfaces.stroke[] | undefined = await this.connection?.query(query, [boardId, ...idList]);
+            return strokes;
+        } catch (err) {
+            logger.error("Error during db deleteStrokes", err);
+        }
+    }
 }
 
 export default PoolConnection;
+
+//Think about being able to give user option to change the name of the tables or at least db name in .env file
+//Improve safety

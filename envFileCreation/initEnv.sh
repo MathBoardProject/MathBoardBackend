@@ -1,13 +1,13 @@
 #!/bin/bash
 
-jsonFile="./envTemplate.json"
-outputFile="../.env"
+source_file="envTemplate.txt"
+target_file="../.env"
 
-# Flatten the JSON file into key=value format
-flat_json=$(jq -r 'to_entries | .[] | "\(.key)=\(.value|tostring)"' "$jsonFile")
+if [[ ! -f $source_file ]]; then
+  echo "Error: Source file $source_file does not exist."
+  exit 1
+fi
 
-# Write to output file
-echo "$flat_json" > "$outputFile"
+cat "$source_file" > "$target_file"
 
-# Optionally, print the output file content
-cat "$outputFile"
+echo "Contents of $source_file have been copied to $target_file."
