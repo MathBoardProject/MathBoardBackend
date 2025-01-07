@@ -17,6 +17,7 @@
     "@types/code": "^4.0.8",
     "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.0",
+    "@types/node": "^22.10.1",
     "@types/winston": "^2.4.4"
   },
   "scripts": {
